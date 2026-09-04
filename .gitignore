@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Environments
+.env
+.venv/
+venv/
+env/
+
+# Local secrets & tooling
+.streamlit/secrets.toml
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# ---------------------------------------------------------------------------
+# Generated data & models
+#
+# Ignored so local experimentation never commits scratch artefacts by accident.
+# The CI pipelines deliberately force-add the specific files that must persist
+# between runs (`git add -f data/raw_observations.parquet models/best_model.pkl`
+# and friends) - see .github/workflows/. That is the one place these should be
+# tracked, and doing it explicitly keeps it intentional rather than incidental.
+# ---------------------------------------------------------------------------
+data/*.parquet
+data/*.csv
+models/*.pkl
+models/registry.json
+
+# reports/ is intentionally NOT ignored. report.md embeds the figures with
+# relative paths, so they have to be tracked for the report to render on GitHub -
+# which is where anyone reading it will actually open it.

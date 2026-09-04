@@ -1,0 +1,77 @@
+name: Feature Pipeline (hourly)
+
+on:
+  schedule:
+    - cron: "7 * * * *"      # hourly at :07 - off the hour, when Actions is least congested
+  workflow_dispatch: {}
+
+# Without this the checkout token is read-only and the push below fails with a
+# 403. The original version of this workflow omitted it and silently never
+# persisted anything.
+permissions:
+  contents: write
+
+# Never let two runs push to the same branch at once. `cancel-in-progress` is
+# deliberately false: a run that is mid-push should finish rather than leave the
+# store half-written.
+concurrency:
+  group: aqi-data-write
+  cancel-in-progress: false
+
+jobs:
+  refresh-features:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run feature pipeline
+        env:
+          CITY_NAME: ${{ vars.CITY_NAME || 'Lahore' }}
+          CITY_LAT: ${{ vars.CITY_LAT || '31.5497' }}
+          CITY_LON: ${{ vars.CITY_LON || '74.3436' }}
+          TIMEZONE: ${{ vars.TIMEZONE || 'Asia/Karachi' }}
+          DATA_SOURCE: ${{ vars.DATA_SOURCE || 'open_meteo' }}
+          AQICN_TOKEN: ${{ secrets.AQICN_TOKEN }}
+          FEATURE_STORE_BACKEND: ${{ vars.FEATURE_STORE_BACKEND || 'local' }}
+          HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+          HOPSWORKS_PROJECT: ${{ vars.HOPSWORKS_PROJECT }}
+        run: python -m src.feature_pipeline
+
+      - name: Refresh forecast and check alerts
+        continue-on-error: true    # a stale model must not fail the data refresh
+        env:
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          ALERT_AQI_THRESHOLD: ${{ vars.ALERT_AQI_THRESHOLD || '150' }}
+        run: python -m src.alerts
+
+      # Only meaningful for the local parquet backend. With Hopsworks the data
+      # already lives in the feature store and there is nothing to commit.
+      - name: Commit updated feature store
+        if: ${{ vars.FEATURE_STORE_BACKEND != 'hopsworks' }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # -f is required: data/*.parquet is gitignored so local development
+          # never commits scratch data by accident. The pipeline commits it
+          # deliberately, which is the one case where it should be tracked.
+          git add -f data/raw_observations.parquet data/predictions.parquet 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore(data): hourly observation refresh [skip ci]"
+          git pull --rebase --autostash origin ${{ github.ref_name }}
+          git push

@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # The suite runs entirely against the deterministic synthetic generator,
+      # so it never depends on a live API or on committed model artefacts.
+      - name: Run tests
+        run: pytest -q --tb=short
+
+      # Redirected to scratch directories on purpose. The repo carries a real
+      # committed observation store, and the feature store upserts rather than
+      # replaces - so a synthetic backfill against the default paths would blend
+      # fake rows into the real dataset and quietly poison the next retrain.
+      - name: Verify the pipeline runs offline end to end
+        env:
+          DATA_DIR: ${{ runner.temp }}/aqi-ci/data
+          MODELS_DIR: ${{ runner.temp }}/aqi-ci/models
+          REPORTS_DIR: ${{ runner.temp }}/aqi-ci/reports
+        run: |
+          python -m src.backfill --synthetic --days 200
+          python -m src.train --fast --folds 2 --stride 12
+          python -m src.report --no-shap
+          python -c "
+          from src import model_registry
+          e = model_registry.production_entry()
+          assert e is not None, 'training promoted no model'
+          m = e['metrics']
+          assert m['rmse'] > 0, 'RMSE of zero means the target leaked'
+          assert m['r2'] < 0.999, f\"R2 of {m['r2']} is impossibly high - check for leakage\"
+          print(f\"OK: {e['model_name']} rmse={m['rmse']:.2f} r2={m['r2']:.3f}\")
+          "
+
+      - name: Upload report artefact
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: offline-run-report
+          path: ${{ runner.temp }}/aqi-ci/reports/
+          retention-days: 7
+
+      # The offline run must leave the committed data and models untouched.
+      - name: Assert the working tree is clean
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::The test run modified tracked files:"
+            git status --porcelain
+            exit 1
+          fi
+          echo "Working tree clean."

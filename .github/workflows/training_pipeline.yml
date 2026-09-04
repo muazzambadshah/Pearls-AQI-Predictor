@@ -1,0 +1,110 @@
+name: Training Pipeline (daily)
+
+on:
+  schedule:
+    - cron: "40 2 * * *"     # 02:40 UTC, after the hourly job has settled
+  workflow_dispatch:
+    inputs:
+      full_backfill:
+        description: "Re-fetch the entire history before training"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aqi-data-write      # shared with the hourly job - never push concurrently
+  cancel-in-progress: false
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      CITY_NAME: ${{ vars.CITY_NAME || 'Lahore' }}
+      CITY_LAT: ${{ vars.CITY_LAT || '31.5497' }}
+      CITY_LON: ${{ vars.CITY_LON || '74.3436' }}
+      TIMEZONE: ${{ vars.TIMEZONE || 'Asia/Karachi' }}
+      FEATURE_STORE_BACKEND: ${{ vars.FEATURE_STORE_BACKEND || 'local' }}
+      HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+      HOPSWORKS_PROJECT: ${{ vars.HOPSWORKS_PROJECT }}
+      # The runner has 16GB; this keeps the horizon-expanded frame well inside it.
+      MAX_TRAIN_ROWS: ${{ vars.MAX_TRAIN_ROWS || '250000' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # A full refetch each day keeps the store consistent and repairs any gap
+      # an hourly run may have missed. It costs a couple of minutes against
+      # Open-Meteo's free tier, which is cheap insurance for training data.
+      - name: Refresh full history
+        if: ${{ github.event_name == 'schedule' || inputs.full_backfill }}
+        run: python -m src.backfill
+
+      - name: Train, backtest and promote
+        run: python -m src.train --folds 4
+
+      - name: Regenerate the report
+        run: python -m src.report
+
+      - name: Summarise the run
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          from src import model_registry
+          e = model_registry.production_entry() or {}
+          m = e.get("metrics", {})
+          print(f"## Promoted: `{e.get('model_name','n/a')}`\n")
+          print("| Metric | Value |\n|---|---|")
+          for k in ("rmse", "mae", "r2", "skill_vs_persistence", "category_accuracy"):
+              if k in m:
+                  print(f"| {k} | {m[k]:.4f} |")
+          fp = e.get("data_fingerprint", {})
+          if fp:
+              print(f"\nTrained on {fp.get('raw_rows','?')} observations "
+                    f"({fp.get('raw_start','?')[:10]} to {fp.get('raw_end','?')[:10]}), "
+                    f"{fp.get('dataset_rows','?')} supervised rows, "
+                    f"{fp.get('n_features','?')} features.")
+          PY
+
+      - name: Commit model, metrics and report
+        if: ${{ vars.FEATURE_STORE_BACKEND != 'hopsworks' }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -f models/best_model.pkl models/registry.json \
+                     data/raw_observations.parquet \
+                     data/horizon_metrics.parquet \
+                     data/model_comparison.parquet 2>/dev/null || true
+          git add reports/ 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "Nothing changed."
+            exit 0
+          fi
+
+          git commit -m "chore(model): daily retrain and report [skip ci]"
+          git pull --rebase --autostash origin ${{ github.ref_name }}
+          git push
+
+      - name: Upload artefacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: training-run-${{ github.run_number }}
+          path: |
+            reports/
+            models/registry.json
+            data/horizon_metrics.parquet
+            data/model_comparison.parquet
+          retention-days: 30

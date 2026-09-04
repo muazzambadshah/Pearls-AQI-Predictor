@@ -1,0 +1,44 @@
+# One image, four entry points. `data/` and `models/` are a shared named volume
+# so the pipelines write what the API and dashboard read.
+
+name: aqi-predictor
+
+services:
+  api:
+    build: .
+    ports: ["8000:8000"]
+    env_file: [.env]
+    volumes: [aqi-state:/app/data, aqi-models:/app/models]
+    restart: unless-stopped
+
+  dashboard:
+    build: .
+    ports: ["8501:8501"]
+    env_file: [.env]
+    volumes: [aqi-state:/app/data, aqi-models:/app/models]
+    command: >
+      streamlit run app/streamlit_app.py
+      --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+    depends_on: [api]
+    restart: unless-stopped
+
+  # One-off jobs. Run explicitly:
+  #   docker compose run --rm backfill
+  #   docker compose run --rm train
+  backfill:
+    build: .
+    env_file: [.env]
+    volumes: [aqi-state:/app/data, aqi-models:/app/models]
+    command: python -m src.backfill
+    profiles: [jobs]
+
+  train:
+    build: .
+    env_file: [.env]
+    volumes: [aqi-state:/app/data, aqi-models:/app/models]
+    command: sh -c "python -m src.train && python -m src.report"
+    profiles: [jobs]
+
+volumes:
+  aqi-state:
+  aqi-models:
