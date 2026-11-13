@@ -1,5 +1,25 @@
 # 🌫️ Pearls AQI Predictor
 
+[![Live Demo](https://img.shields.io/badge/▶_Live_Demo-lahore--aqi--forecast-c6ff3d?style=for-the-badge)](https://lahore-aqi-forecast.vercel.app)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![LightGBM](https://img.shields.io/badge/LightGBM-9cf?style=for-the-badge)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)
+
+> **👉 Live demo: https://lahore-aqi-forecast.vercel.app**. It pulls Lahore's current pollutant and weather data
+> from Open-Meteo and forecasts AQI 1–72 h ahead **in the browser**, with a conformally calibrated 80 % interval.
+>
+> | Browser forecaster (2026 hold-out, 40.5k forecasts) | RMSE | vs persistence |
+> |---|---|---|
+> | 1–6 h | 15.8 | 18.3 |
+> | 7–24 h | 19.7 | 29.8 |
+> | 25–48 h | 27.3 | 37.2 |
+> | 49–72 h | 29.0 | 39.5 |
+> | **Overall** | **25.4** | 35.1 (**−28 %**) · 80 % interval coverage 85 % |
+>
+> The browser model is a horizon-conditioned HistGradientBoosting (median + quantiles + CQR calibration), exported
+> to JSON trees that are bit-exact with scikit-learn. See `scripts/train_browser_forecaster.py` and `web_demo/`.
+
 Three-day hourly **Air Quality Index** forecasting for Lahore, end to end: automated
 data collection, a leak-free feature pipeline, walk-forward model selection, a REST
 API, and an interactive dashboard — retraining itself daily on GitHub Actions.

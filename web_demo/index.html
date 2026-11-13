@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lahore AQI Forecast — Live Demo</title>
+<meta name="description" content="Live 72-hour air-quality forecast for Lahore with calibrated uncertainty, running in your browser. By Muazzam Badshah Khan.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='52'>🌫️</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#07070b;--bg2:#0e0e15;--card:#12121b;--line:#24243a;--ink:#ecebf5;--mute:#8d8ca6;--acid:#c6ff3d;--violet:#8b5cff;--pink:#ff4f9a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif;line-height:1.5;background-image:radial-gradient(circle at 10% 0%,#ff4f9a1c,transparent 40%),radial-gradient(circle at 90% 10%,#8b5cff22,transparent 40%)}
+.mono{font-family:'JetBrains Mono',monospace}
+a{color:var(--acid)}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 60px}
+nav{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:36px}
+nav .b{font-family:'JetBrains Mono',monospace;font-weight:600}
+nav .b span{background:var(--acid);color:#000;padding:4px 8px;border-radius:8px;margin-right:8px}
+nav .l{display:flex;gap:8px}
+nav .l a{font-size:13px;color:var(--ink);text-decoration:none;border:1px solid var(--line);padding:8px 14px;border-radius:999px}
+nav .l a:hover{background:var(--ink);color:var(--bg)}
+h1{font-size:clamp(32px,5.6vw,60px);letter-spacing:-.04em;line-height:1;font-weight:600}
+h1 em{font-style:normal;color:var(--acid)}
+.lead{color:var(--mute);max-width:760px;margin:16px 0 26px;font-size:17px}
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:1.3fr 1fr}
+@media(max-width:900px){.g4{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px;min-width:0}
+.k{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;color:var(--mute);text-transform:uppercase;margin-bottom:10px}
+.big{font-size:52px;font-weight:600;letter-spacing:-.04em;line-height:1}
+.cat{display:inline-block;margin-top:10px;font-size:13px;padding:5px 12px;border-radius:999px;color:#000;font-weight:600}
+.sub{color:var(--mute);font-size:13px;margin-top:8px}
+svg text{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--mute)}
+.chart{width:100%;height:auto;display:block}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mute);margin-top:8px}
+.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:6px}
+#status{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--mute);margin:-10px 0 18px}
+.days{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.day{border-radius:16px;padding:14px;background:var(--bg2);border:1px solid var(--line)}
+.day b{font-size:30px;display:block;letter-spacing:-.03em}
+.day span{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mute)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--line)}
+th{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mute);font-weight:400;letter-spacing:.06em}
+td.n{font-family:'JetBrains Mono',monospace}
+.good{color:var(--acid)}
+.how ol{padding-left:20px;color:var(--mute)}.how li{margin:6px 0}.how b{color:var(--ink)}
+.advice{margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--bg2);border:1px solid var(--line);font-size:14px}
+footer{margin-top:36px;color:var(--mute);font-size:13px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="b"><span>mb</span>Pearls AQI Predictor · live</div>
+    <div class="l"><a href="https://muazzam-portfolio.vercel.app">← Portfolio</a><a href="https://github.com/muazzambadshah/Pearls-AQI-Predictor" target="_blank" rel="noopener">GitHub ↗</a></div>
+  </nav>
+  <h1>Lahore air quality, <em>next 72 hours.</em></h1>
+  <p class="lead">Live pollutant and weather data for Lahore is pulled from Open-Meteo right now. A gradient-boosted forecaster trained on 3+ years of hourly history predicts US AQI 1 to 72 hours ahead, with a <b>conformally calibrated 80% interval</b>. All the computation runs in your browser.</p>
+  <div id="status">fetching live data…</div>
+
+  <div class="grid g4">
+    <div class="card"><div class="k">Now · observed</div><div class="big" id="now">—</div><span class="cat" id="nowCat"></span><div class="sub" id="nowT"></div></div>
+    <div class="card"><div class="k">PM2.5 now</div><div class="big" id="pm">—</div><div class="sub">μg/m³ · WHO 24h guideline: 15</div></div>
+    <div class="card"><div class="k">Peak next 72h</div><div class="big" id="peak">—</div><span class="cat" id="peakCat"></span><div class="sub" id="peakT"></div></div>
+    <div class="card"><div class="k">Model skill</div><div class="big good" id="skill">—</div><div class="sub">RMSE reduction vs persistence on the 2026 hold-out</div></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="k">Hourly forecast with calibrated 80% interval</div>
+    <svg class="chart" id="fc" viewBox="0 0 1000 320" ></svg>
+    <div class="legend"><span><i style="background:#ecebf5"></i>observed (last 48h)</span><span><i style="background:var(--acid)"></i>forecast</span><span><i style="background:#c6ff3d40;height:8px"></i>80% interval</span><span>background = AQI category</span></div>
+    <div class="days" id="days" style="margin-top:14px"></div>
+    <div class="advice" id="advice"></div>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <div class="k">Back-test · 24h-ahead forecast vs reality (2026 hold-out)</div>
+      <svg class="chart" id="bt" viewBox="0 0 1000 260" ></svg>
+      <div class="legend"><span><i style="background:#ecebf5"></i>actual</span><span><i style="background:var(--acid)"></i>forecast made 24h earlier</span></div>
+    </div>
+    <div class="card">
+      <div class="k">Hold-out accuracy by horizon</div>
+      <table id="tbl"></table>
+      <div class="sub" id="meta"></div>
+    </div>
+  </div>
+
+  <div class="card how" style="margin-top:16px">
+    <div class="k">How it works</div>
+    <ol>
+      <li><b>Data:</b> hourly Open-Meteo weather, pollutants and US AQI for Lahore since 2023, the same source as my Hopsworks feature pipeline.</li>
+      <li><b>Features:</b> AQI lags (0–72h), 24h rolling stats, PM2.5/PM10/NO₂/CO, weather forecast at the target hour, calendar terms and the horizon itself. That makes one global direct model for every horizon from 1 to 72h.</li>
+      <li><b>Models:</b> HistGradientBoosting with an absolute-error median plus 10% and 90% quantile models. The interval is then calibrated with conformalized quantile regression per horizon bucket on a separate calibration window.</li>
+      <li><b>Evaluation:</b> chronological hold-out with a 72h gap, compared against persistence and 24h-seasonal-naive baselines.</li>
+      <li><b>Deployment:</b> the trees are exported to JSON (bit-exact with scikit-learn) and evaluated in JavaScript, so no server is needed.</li>
+    </ol>
+    <p class="sub">The full production pipeline (Hopsworks feature store, a 4-model ensemble, FastAPI and GitHub Actions) is in the GitHub repo. This page is the lightweight browser version of that forecaster.</p>
+  </div>
+  <footer>Built by <a href="https://muazzam-portfolio.vercel.app">Muazzam Badshah Khan</a>, AI/ML Engineer · data: <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0)</footer>
+</div>
+<script>
+const LAT=31.5497,LON=74.3436;
+const $=s=>document.querySelector(s);
+const CATS=[[50,'Good','#3ddc84'],[100,'Moderate','#e6d43a'],[150,'Unhealthy for sensitive','#ff9a3c'],[200,'Unhealthy','#ff4f4f'],[300,'Very unhealthy','#b04fff'],[1e9,'Hazardous','#8a1f3d']];
+const cat=v=>CATS.find(c=>v<=c[0]);
+const ADV={Good:'Air is clean. Great time for outdoor activity.',Moderate:'Acceptable. Unusually sensitive people should limit long outdoor exertion.','Unhealthy for sensitive':'Children, elderly and people with asthma should reduce outdoor activity. Consider a mask.',Unhealthy:'Everyone should limit outdoor exertion. Wear an N95 outdoors and keep windows closed.','Very unhealthy':'Avoid outdoor activity. Run an air purifier indoors if possible.',Hazardous:'Health emergency. Stay indoors.'};
+
+function predictTree(m,x){let o=m.base;for(const[f,th,l,r,leaf,v,ml]of m.trees){let n=0;while(!leaf[n]){const xv=x[f[n]];n=Number.isNaN(xv)?(ml[n]?l[n]:r[n]):(xv<=th[n]?l[n]:r[n])}o+=v[n]}return o}
+
+async function getJSON(u){const r=await fetch(u);if(!r.ok)throw new Error(r.status+' '+u);return r.json()}
+
+(async()=>{try{
+ const [M,aq,wx]=await Promise.all([
+  getJSON('aqi_model.json'),
+  getJSON(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAT}&longitude=${LON}&hourly=us_aqi,pm2_5,pm10,nitrogen_dioxide,carbon_monoxide&past_days=5&forecast_days=1&timezone=UTC`),
+  getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,precipitation,surface_pressure,cloud_cover&past_days=5&forecast_days=4&timezone=UTC`)]);
+ const now=Date.now();
+ // last hour with an observed AQI that is not in the future
+ const at=aq.hourly.time.map(t=>Date.parse(t+'Z'));let i0=-1;
+ for(let i=at.length-1;i>=0;i--){if(at[i]<=now&&aq.hourly.us_aqi[i]!=null){i0=i;break}}
+ if(i0<72)throw new Error('not enough recent AQI history');
+ const A=aq.hourly.us_aqi.map(v=>v==null?NaN:v);
+ // fill small gaps linearly
+ for(let i=1;i<A.length;i++)if(Number.isNaN(A[i])){let j=i;while(j<A.length&&Number.isNaN(A[j]))j++;if(j<A.length&&j-i<=6)for(let k=i;k<j;k++)A[k]=A[i-1]+(A[j]-A[i-1])*(k-i+1)/(j-i+1)}
+ const w=A.slice(i0-23,i0+1).filter(v=>!Number.isNaN(v));const mean=w.reduce((s,v)=>s+v,0)/w.length;
+ const std=Math.sqrt(w.reduce((s,v)=>s+(v-mean)**2,0)/(w.length-1));
+ const base=[...M.lags.map(l=>A[i0-l]),mean,std,Math.min(...w),Math.max(...w),A[i0]-A[i0-3],
+  aq.hourly.pm2_5[i0],aq.hourly.pm10[i0],aq.hourly.nitrogen_dioxide[i0],aq.hourly.carbon_monoxide[i0]];
+ const wt=wx.hourly.time.map(t=>Date.parse(t+'Z'));const wIdx=t=>wt.indexOf(t);
+ const t0=at[i0],out=[];
+ for(let h=1;h<=72;h++){const tt=t0+h*3600e3,j=wIdx(tt);if(j<0)continue;const d=new Date(tt);
+  const doy=(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-Date.UTC(d.getUTCFullYear(),0,0))/864e5;
+  const wd=wx.hourly.wind_direction_10m[j]*Math.PI/180;
+  const x=[...base,...M.weather.map(k=>wx.hourly[k][j]??NaN),Math.sin(wd),Math.cos(wd),
+   Math.sin(2*Math.PI*d.getUTCHours()/24),Math.cos(2*Math.PI*d.getUTCHours()/24),Math.sin(2*Math.PI*doy/365.25),Math.cos(2*Math.PI*doy/365.25),h];
+  const b=M.buckets.findIndex(([a,c])=>h>=a&&h<=c),o=M.conformal_offsets[b];
+  const p=predictTree(M.models.median,x),lo=predictTree(M.models.q10,x)-o,hi=predictTree(M.models.q90,x)+o;
+  out.push({t:tt,h,p:Math.max(0,p),lo:Math.max(0,Math.min(lo,p)),hi:Math.max(hi,p)})}
+ const fmt=t=>new Date(t).toLocaleString('en-GB',{timeZone:'Asia/Karachi',weekday:'short',hour:'2-digit',minute:'2-digit'});
+ const cNow=cat(A[i0]);$('#now').textContent=Math.round(A[i0]);$('#nowCat').textContent=cNow[1];$('#nowCat').style.background=cNow[2];
+ $('#nowT').textContent=fmt(t0)+' PKT';$('#pm').textContent=Math.round(aq.hourly.pm2_5[i0]);
+ const pk=out.reduce((a,b)=>b.p>a.p?b:a);const cP=cat(pk.p);$('#peak').textContent=Math.round(pk.p);$('#peakCat').textContent=cP[1];$('#peakCat').style.background=cP[2];$('#peakT').textContent='expected '+fmt(pk.t);
+ $('#skill').textContent='−'+Math.round((1-M.metrics.overall.rmse/M.metrics.persistence.rmse)*100)+'%';
+ // day cards
+ $('#days').innerHTML=[0,1,2].map(d=>{const s=out.slice(d*24,d*24+24);if(!s.length)return'';const m=s.reduce((a,b)=>a+b.p,0)/s.length,c=cat(m);
+  return `<div class="day" style="border-color:${c[2]}55"><span>${['Next 24h','24–48h','48–72h'][d]}</span><b style="color:${c[2]}">${Math.round(m)}</b><span>${c[1]} · range ${Math.round(Math.min(...s.map(v=>v.lo)))}–${Math.round(Math.max(...s.map(v=>v.hi)))}</span></div>`}).join('');
+ $('#advice').innerHTML='<b>What to do:</b> '+ADV[cat(out.slice(0,24).reduce((a,b)=>a+b.p,0)/Math.min(24,out.length))[1]];
+ // forecast chart
+ const past=[];for(let i=i0-47;i<=i0;i++)past.push({t:at[i],y:A[i]});
+ drawFc(past,out);drawBt(M.backtest_24h);table(M);let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{drawFc(past,out);drawBt(M.backtest_24h)},150)});
+ $('#status').textContent=`✓ live data to ${fmt(t0)} PKT · ${out.length} hourly forecasts computed in your browser`;
+}catch(e){$('#status').textContent='Could not load live data: '+e.message+'. Try refreshing.';console.error(e)}})();
+
+function scale(d0,d1,r0,r1){return v=>r0+(v-d0)/(d1-d0)*(r1-r0)}
+function drawFc(past,out){const el=$('#fc'),W=Math.max(300,el.clientWidth),H=W<600?240:320,L=34,R=8,T=10,B=24;el.setAttribute('viewBox',`0 0 ${W} ${H}`);el.style.height=H+'px';const all=[...past.map(p=>p.y),...out.map(o=>o.hi)];
+ const ymax=Math.max(160,Math.ceil(Math.max(...all)/50)*50);const x=scale(past[0].t,out[out.length-1].t,L,W-R),y=scale(0,ymax,H-B,T);let s='';
+ for(let i=0;i<CATS.length;i++){const lo=i?CATS[i-1][0]:0,hi=Math.min(CATS[i][0],ymax);if(lo>=ymax)break;s+=`<rect x="${L}" y="${y(hi)}" width="${W-L-R}" height="${y(lo)-y(hi)}" fill="${CATS[i][2]}" opacity=".07"/>`}
+ for(let v=0;v<=ymax;v+=50)s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#24243a"/><text x="4" y="${y(v)+3}">${v}</text>`;
+ s+=`<path d="M${out.map(o=>x(o.t)+','+y(o.hi)).join('L')}L${out.slice().reverse().map(o=>x(o.t)+','+y(o.lo)).join('L')}Z" fill="#c6ff3d" opacity=".18"/>`;
+ s+=`<polyline fill="none" stroke="#ecebf5" stroke-width="2" points="${past.map(p=>x(p.t)+','+y(p.y)).join(' ')}"/>`;
+ s+=`<polyline fill="none" stroke="#c6ff3d" stroke-width="2.5" points="${[past[past.length-1]].map(p=>x(p.t)+','+y(p.y)).concat(out.map(o=>x(o.t)+','+y(o.p))).join(' ')}"/>`;
+ const nx=x(past[past.length-1].t);s+=`<line x1="${nx}" x2="${nx}" y1="${T}" y2="${H-B}" stroke="#8d8ca6" stroke-dasharray="4 4"/><text x="${nx+4}" y="${T+10}">now</text>`;
+ for(let d=1;d<=3;d++){const t=past[past.length-1].t+d*864e5;if(t<=out[out.length-1].t)s+=`<text x="${x(t)-14}" y="${H-6}">+${d*24}h</text>`}
+ $('#fc').innerHTML=s}
+function drawBt(bt){const el=$('#bt'),W=Math.max(300,el.clientWidth),H=W<600?200:260,L=34,R=8,T=10,B=24;el.setAttribute('viewBox',`0 0 ${W} ${H}`);el.style.height=H+'px';const ts=bt.map(b=>Date.parse(b.t));const ymax=Math.ceil(Math.max(...bt.map(b=>Math.max(b.y,b.p)))/50)*50;
+ const x=scale(ts[0],ts[ts.length-1],L,W-R),y=scale(0,ymax,H-B,T);let s='';
+ for(let v=0;v<=ymax;v+=100)s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#24243a"/><text x="4" y="${y(v)+3}">${v}</text>`;
+ s+=`<polyline fill="none" stroke="#ecebf5" stroke-width="1.4" opacity=".8" points="${bt.map((b,i)=>x(ts[i])+','+y(b.y)).join(' ')}"/>`;
+ s+=`<polyline fill="none" stroke="#c6ff3d" stroke-width="1.4" points="${bt.map((b,i)=>x(ts[i])+','+y(b.p)).join(' ')}"/>`;
+ [0,Math.floor(ts.length/2),ts.length-1].forEach(i=>s+=`<text x="${Math.min(x(ts[i]),W-70)}" y="${H-6}">${bt[i].t.slice(0,7)}</text>`);
+ $('#bt').innerHTML=s}
+function table(M){const m=M.metrics;$('#tbl').innerHTML='<tr><th>HORIZON</th><th>RMSE</th><th>PERSIST.</th><th>R²</th><th>80% COV.</th></tr>'+
+ m.by_horizon.map(r=>`<tr><td>${r.range}</td><td class="n good">${r.rmse.toFixed(1)}</td><td class="n">${r.persistence_rmse.toFixed(1)}</td><td class="n">${r.r2.toFixed(2)}</td><td class="n">${Math.round(r.coverage_80*100)}%</td></tr>`).join('')+
+ `<tr><td><b>Overall</b></td><td class="n good"><b>${m.overall.rmse.toFixed(1)}</b></td><td class="n">${m.persistence.rmse.toFixed(1)}</td><td class="n">${m.overall.r2.toFixed(2)}</td><td class="n">${Math.round(m.interval_coverage_80*100)}%</td></tr>`;
+ $('#meta').textContent=`Hold-out ${m.test_period[0].slice(0,10)} → ${m.test_period[1].slice(0,10)} · ${m.test_rows.toLocaleString()} forecasts · AQI band within ±1 category: ${Math.round(m.within_one_band*100)}%`}
+</script>
+</body>
+</html>
