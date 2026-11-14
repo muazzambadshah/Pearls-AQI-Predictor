@@ -2,7 +2,7 @@
 
 **City:** Lahore (31.5497, 74.3436)
 **Forecast horizon:** 3 days, hourly resolution (72 steps)
-**Generated:** 2026-11-13 10:16 UTC
+**Generated:** 2026-11-14 09:46 UTC
 **Production model:** `blend_top4`
 
 ---
@@ -13,14 +13,14 @@ An end-to-end system that forecasts the US Air Quality Index for Lahore
 up to 3 days ahead, retrains itself daily, and serves
 results through a REST API and an interactive dashboard.
 
-The headline result: backtest RMSE of **27.28 AQI points**
+The headline result: backtest RMSE of **27.29 AQI points**
 with **R² = 0.605**, which is a **30.0% reduction in RMSE against a persistence forecast**. Accuracy is
 reported per lead time rather than as a single average, because a 1-hour forecast
 and a 72-hour forecast are different problems and averaging them together
 flatters the harder one.
 
-The model is trained on **33,899 hours** of real observations
-(1412 days, 2023-01-01 to 2026-11-13) pulled from
+The model is trained on **33,922 hours** of real observations
+(1413 days, 2023-01-01 to 2026-11-14) pulled from
 Open-Meteo's reanalysis archive — not synthetic data, and not the ~90 days a
 forecast endpoint alone would provide.
 
@@ -31,8 +31,8 @@ forecast endpoint alone would provide.
 | Property | Value |
 |---|---|
 | Source | Open-Meteo archive + air-quality API (free, no key) |
-| Rows | 33,899 hourly observations |
-| Span | 2023-01-01 00:00 → 2026-11-13 10:00 (1412 days) |
+| Rows | 33,922 hourly observations |
+| Span | 2023-01-01 00:00 → 2026-11-14 09:00 (1413 days) |
 | Missing hours | 0 |
 | Variables | 20 (weather, six pollutants, US AQI) |
 | Mean AQI | 152.2 |
@@ -40,14 +40,14 @@ forecast endpoint alone would provide.
 | Std. dev. | 46.1 |
 | Range | 56 – 538 |
 | 95th percentile | 235 |
-| Hours ≥ 150 (Unhealthy) | 18,571 (54.8%) |
+| Hours ≥ 150 (Unhealthy) | 18,594 (54.8%) |
 
 **Time spent in each EPA category**
 
 | Category | Share of hours |
 |---|---|
-| Moderate | 12.8% |
-| Unhealthy for Sensitive Groups | 32.5% |
+| Moderate | 12.7% |
+| Unhealthy for Sensitive Groups | 32.4% |
 | Unhealthy | 42.4% |
 | Very Unhealthy | 11.7% |
 | Hazardous | 0.7% |
@@ -75,8 +75,8 @@ Augmented Dickey-Fuller, on the most recent year:
 
 | Series | ADF statistic | p-value | Stationary at 5%? |
 |---|---|---|---|
-| AQI level | -4.87 | 0.0000 | yes |
-| First difference | -19.56 | 0.0000 | yes |
+| AQI level | -4.97 | 0.0000 | yes |
+| First difference | -19.49 | 0.0000 | yes |
 
 Both series reject the unit-root null, so the level is already stationary over
 this window and there is nothing for differencing to fix. That is a useful
@@ -203,21 +203,21 @@ Mean across walk-forward folds; `±` is the standard deviation across folds, whi
 
 | model | rmse | rmse_std | mae | r2 | skill_vs_persistence | category_accuracy | n_folds |
 |---|---|---|---|---|---|---|---|
-| blend_top4 | 27.28 | 7.31 | 18.37 | 0.605 | 0.300 | 0.664 | 4 |
-| blend_top3 | 27.31 | 7.08 | 18.47 | 0.606 | 0.298 | 0.662 | 4 |
-| blend_top2 | 28.06 | 7.06 | 18.97 | 0.588 | 0.277 | 0.655 | 4 |
-| lightgbm | 28.08 | 6.88 | 19.01 | 0.588 | 0.276 | 0.653 | 4 |
-| hist_gradient_boosting | 28.33 | 7.17 | 19.19 | 0.580 | 0.271 | 0.652 | 4 |
-| lightgbm_anchored | 28.35 | 8.47 | 18.59 | 0.569 | 0.276 | 0.668 | 4 |
-| hist_gradient_boosting_anchored | 28.60 | 8.55 | 18.84 | 0.562 | 0.269 | 0.664 | 4 |
-| random_forest | 28.89 | 6.64 | 19.44 | 0.567 | 0.253 | 0.645 | 4 |
-| ridge | 29.29 | 7.38 | 20.79 | 0.538 | 0.246 | 0.634 | 4 |
-| ridge_anchored | 29.29 | 7.38 | 20.79 | 0.538 | 0.246 | 0.634 | 4 |
-| extra_trees_anchored | 29.55 | 7.98 | 19.40 | 0.538 | 0.241 | 0.652 | 4 |
-| elastic_net | 30.04 | 6.87 | 21.07 | 0.522 | 0.224 | 0.624 | 4 |
-| baseline:climatology | 38.67 | 6.34 | 29.08 | 0.255 | — | 0.470 | 4 |
-| baseline:persistence | 38.70 | 8.62 | 26.13 | 0.206 | — | 0.576 | 4 |
-| baseline:seasonal_naive_24h | 39.85 | 8.41 | 27.10 | 0.182 | — | 0.552 | 4 |
+| blend_top4 | 27.29 | 7.26 | 18.36 | 0.605 | 0.300 | 0.664 | 4 |
+| blend_top3 | 27.34 | 7.06 | 18.47 | 0.605 | 0.297 | 0.663 | 4 |
+| lightgbm | 28.01 | 6.94 | 18.93 | 0.589 | 0.279 | 0.656 | 4 |
+| blend_top2 | 28.06 | 7.12 | 18.95 | 0.588 | 0.278 | 0.657 | 4 |
+| hist_gradient_boosting | 28.40 | 7.20 | 19.21 | 0.578 | 0.269 | 0.653 | 4 |
+| lightgbm_anchored | 28.51 | 8.41 | 18.66 | 0.566 | 0.271 | 0.668 | 4 |
+| hist_gradient_boosting_anchored | 28.55 | 8.45 | 18.77 | 0.562 | 0.271 | 0.662 | 4 |
+| random_forest | 28.86 | 6.63 | 19.45 | 0.567 | 0.254 | 0.644 | 4 |
+| ridge | 29.30 | 7.32 | 20.80 | 0.537 | 0.246 | 0.634 | 4 |
+| ridge_anchored | 29.30 | 7.32 | 20.80 | 0.537 | 0.246 | 0.634 | 4 |
+| extra_trees_anchored | 29.48 | 7.97 | 19.36 | 0.539 | 0.244 | 0.651 | 4 |
+| elastic_net | 30.05 | 6.82 | 21.08 | 0.521 | 0.224 | 0.624 | 4 |
+| baseline:climatology | 38.65 | 6.32 | 29.04 | 0.256 | — | 0.471 | 4 |
+| baseline:persistence | 38.73 | 8.62 | 26.16 | 0.202 | — | 0.575 | 4 |
+| baseline:seasonal_naive_24h | 39.89 | 8.38 | 27.14 | 0.178 | — | 0.551 | 4 |
 
 ![Model comparison](figures/model_comparison.png)
 
@@ -228,8 +228,8 @@ an average of columns that already exist, with no refitting and no extra folds.
 They are scored through the identical metric path as everything else, with
 climatology refitted at each fold's cutoff, so they appear here on equal terms.
 
-`blend_top4` reaches 27.28 RMSE against
-`lightgbm` at 28.08 — it beats the best single model by 0.80 RMSE. A blend is
+`blend_top4` reaches 27.29 RMSE against
+`lightgbm` at 28.01 — it beats the best single model by 0.72 RMSE. A blend is
 promoted only when it wins outright; otherwise the best single model ships.
 
 **A hypothesis the data would not settle.** Tree ensembles cannot
@@ -240,13 +240,13 @@ anchored variant was built and backtested alongside its level-target twin:
 
 | Model | Level RMSE | Anchored RMSE | Difference |
 |---|---|---|---|
-| `hist_gradient_boosting` | 28.33 | 28.60 | -0.26 |
-| `lightgbm` | 28.08 | 28.35 | -0.27 |
-| `ridge` | 29.29 | 29.29 | -0.00 |
+| `hist_gradient_boosting` | 28.40 | 28.55 | -0.14 |
+| `lightgbm` | 28.01 | 28.51 | -0.50 |
+| `ridge` | 29.30 | 29.30 | -0.00 |
 
 The result is a wash, and it points in different directions for different
 models. Every gap above is an order of magnitude smaller than the fold-to-fold
-standard deviation (median 7.38 RMSE), so the honest conclusion is that
+standard deviation (median 7.32 RMSE), so the honest conclusion is that
 this dataset does not decide the question — not that either framing wins. A
 plausible reason the effect is so muted: `aqi_at_origin` is already a feature, so
 a level-target model can learn the same residual relationship wherever it helps.
@@ -265,9 +265,9 @@ problem; the degradation from day 1 to day 3 is the honest picture.
 
 | Lead time | RMSE | MAE | R² | Correct EPA band | Skill vs persistence |
 |---|---|---|---|---|---|
-| Day 1 (1–24h) | 20.78 | 13.68 | 0.810 | 73.8% | +15.4% |
-| Day 2 (25–48h) | 29.53 | 19.55 | 0.624 | 64.3% | +28.3% |
-| Day 3 (49–72h) | 32.20 | 21.89 | 0.554 | 61.2% | +30.7% |
+| Day 1 (1–24h) | 20.70 | 13.61 | 0.811 | 74.0% | +15.7% |
+| Day 2 (25–48h) | 29.53 | 19.52 | 0.624 | 64.2% | +28.4% |
+| Day 3 (49–72h) | 32.27 | 21.94 | 0.552 | 61.1% | +30.7% |
 
 ![Accuracy by horizon](figures/accuracy_by_horizon.png)
 
@@ -283,7 +283,7 @@ Regression metrics do not describe what a user experiences. These do:
 | Exact EPA band | 66.4% | forecast lands in the right category |
 | Within one band | 99.2% | at most one category out |
 | Exceedance recall | 82.1% | share of AQI ≥ 150 hours caught |
-| Exceedance precision | 88.0% | share of alerts that were warranted |
+| Exceedance precision | 87.9% | share of alerts that were warranted |
 | Base rate | 57.4% | how often AQI ≥ 150 actually occurs |
 
 Recall is the figure to watch for an alerting system: a missed smog episode costs
@@ -299,11 +299,11 @@ far more than a false alarm.
 
 | Group | Share of total \|SHAP\| |
 |---|---|
-| Pollutants now | 32.8% |
-| Forecast weather | 31.7% |
-| Time of day / season | 17.9% |
+| Pollutants now | 34.5% |
+| Forecast weather | 30.2% |
+| Time of day / season | 17.4% |
 | AQI history | 12.2% |
-| Weather now | 3.7% |
+| Weather now | 3.9% |
 | Lead time | 1.7% |
 | Other | 0.0% |
 
@@ -311,23 +311,23 @@ far more than a false alarm.
 
 | Feature | Mean \|SHAP\| |
 |---|---|
-| pm2_5_rollmean_24h | 11.872 |
-| tgt_wind_speed_10m_rollmean_24h | 11.770 |
-| tgt_month_cos | 6.076 |
-| pm2_5_at_origin | 3.992 |
-| tgt_relative_humidity_2m_rollmean_24h | 2.645 |
-| tgt_hour_sin | 2.439 |
-| tgt_doy_cos | 2.134 |
-| aqi_rollmean_168h | 1.421 |
-| tgt_temperature_2m_rollmean_6h | 1.304 |
-| tgt_dew_point_2m | 1.286 |
-| aqi_rollmin_6h | 1.279 |
-| tgt_temperature_2m_rollmean_24h | 1.191 |
+| pm2_5_rollmean_24h | 13.283 |
+| tgt_wind_speed_10m_rollmean_24h | 11.441 |
+| tgt_month_cos | 5.966 |
+| pm2_5_at_origin | 4.089 |
+| tgt_doy_cos | 2.582 |
+| tgt_relative_humidity_2m_rollmean_24h | 2.409 |
+| tgt_hour_sin | 1.878 |
+| aqi_rollmean_168h | 1.761 |
+| tgt_temperature_2m_rollmean_24h | 1.251 |
+| aqi_rollmin_12h | 1.227 |
+| tgt_dew_point_2m | 1.164 |
+| pm_ratio_at_origin | 1.097 |
 
 This is the single most important result in the report, and it validates the
 central design decision.
 
-**Forecast weather is the largest driver at 32%, ahead of AQI
+**Forecast weather is the largest driver at 30%, ahead of AQI
 history at 12%.** The model leans hardest on information about
 the *target* hour — what the wind, temperature and rain will be doing when the
 forecast lands — rather than on where AQI is right now.
@@ -336,7 +336,7 @@ That is precisely the information the recursive approach cannot use. A recursive
 forecaster has to guess the weather forward, and in practice freezes it at the
 last observed value; the direct formulation reads it straight from Open-Meteo's
 published forecast. SHAP says that channel carries a third of the model's signal,
-which is a concrete explanation for where the 32% skill over
+which is a concrete explanation for where the 30% skill over
 persistence comes from: persistence has, by construction, none of it.
 
 The corollary is the perfect-prog caveat in section 5. A model that depends this
